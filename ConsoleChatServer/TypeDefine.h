@@ -32,6 +32,12 @@ struct IOContext
 
 
 //패킷 타입 정의
+typedef char PacketType;
+
+#define PKT_CHANGE_NAME 0 //이름 변경 패킷
+#define PKT_CHAT		1 //말한 내용
+#define	PKT_DISCONNECT	2 //연결 종료 요청
+#define PKT_CONNECT		3 //연결 요청
 
 
 #endif
