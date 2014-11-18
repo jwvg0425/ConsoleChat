@@ -20,7 +20,7 @@ public:
 private:
 	size_t			m_BufferSize;
 	size_t			m_UsingBytes;
-	char*			m_Buffer;
+	char			m_Buffer[BUF_SIZE];
 };
 
 #endif

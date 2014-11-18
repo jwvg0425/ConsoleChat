@@ -47,6 +47,9 @@ int main(int argc, char* argv[])
 	servAdr.sin_port = htons(atoi(argv[1]));
 #endif
 
+	char option = 1;
+	setsockopt(hServSock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+
 	bind(hServSock, (SOCKADDR*)&servAdr, sizeof(servAdr));
 	listen(hServSock, 5);
 
@@ -58,6 +61,11 @@ int main(int argc, char* argv[])
 
 		hClntSock = accept(hServSock, (SOCKADDR*)&clntAdr, &addrLen);
 
+		if (hClntSock == INVALID_SOCKET)
+		{
+			continue;
+		}
+
 		Client* client = new Client(hClntSock);
 
 		CreateIoCompletionPort((HANDLE)hClntSock, hComPort, (ULONG_PTR)client, 0);
@@ -67,6 +75,7 @@ int main(int argc, char* argv[])
 		client->connect();
 	}
 
+	ClientManager::releaseInstance();
 	CloseHandle(hComPort);
 	closesocket(hServSock);
 	WSACleanup();
@@ -100,6 +109,8 @@ unsigned WINAPI IOCPThreadMain(LPVOID pComPort)
 				client->recv();
 			}
 		}
+
+		delete context;
 	}
 	return 0;
 }

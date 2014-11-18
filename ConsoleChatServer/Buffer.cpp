@@ -4,13 +4,12 @@
 
 Buffer::Buffer(int bufferSize)
 {
-	m_Buffer = new char[bufferSize];
 	m_BufferSize = bufferSize;
+	m_UsingBytes = 0;
 }
 
 Buffer::~Buffer()
 {
-	delete[] m_Buffer;
 }
 
 bool Buffer::write(const char* data, size_t bytes)
@@ -32,7 +31,7 @@ bool Buffer::read(OUT char* destBuf, size_t bytes)
 {
 	if (m_UsingBytes >= bytes)
 	{
-		memcpy_s(m_Buffer, bytes, destBuf, bytes);
+		memcpy_s(destBuf, bytes, m_Buffer, bytes);
 		remove(bytes);
 
 		return true;
@@ -56,7 +55,7 @@ bool Buffer::remove(size_t bytes)
 {
 	if (m_UsingBytes >= bytes)
 	{
-		memmove_s(m_Buffer, bytes, m_Buffer + bytes, m_UsingBytes - bytes);
+		memmove_s(m_Buffer, m_BufferSize, m_Buffer + bytes, m_UsingBytes - bytes);
 		m_UsingBytes -= bytes;
 
 		return true;

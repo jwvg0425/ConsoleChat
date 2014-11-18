@@ -57,40 +57,47 @@ void Client::update(char* buffer, size_t bytes)
 	m_Buffer.write(buffer, bytes);
 
 	//packet 길이 읽어 옴.
-	char packetLength = 0;
+	char stringLength = 0;
 	char sendBuffer[BUF_SIZE];
-	m_Buffer.peek(&packetLength, 1);
+	m_Buffer.peek(&stringLength, 1);
 
-	while (packetLength <= m_Buffer.getUsingBytes() - 1)
+	while (stringLength <= (int)m_Buffer.getUsingBytes() - 2)
 	{
 		char string[BUF_SIZE] = { 0, };
-		PacketType type;
-		m_Buffer.read(&packetLength, 1);
+		char temp[BUF_SIZE] = { 0, };
+		PacketType type = 0;
+		m_Buffer.read(&stringLength, 1);
 		m_Buffer.read(&type, 1);
 		
 		//패킷 완성되는 크기만큼 읽어들인다.
-		m_Buffer.read(string, packetLength - 2);
+		m_Buffer.read(string, stringLength);
 
 		switch (type)
 		{
 		case PKT_CONNECT:
 			m_Name = string;
-			m_IsConnected = true;
+			sprintf_s(sendBuffer, "User [ %s ] entered.", m_Name.c_str());
+			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			break;
 		case PKT_CHANGE_NAME:
+			sprintf_s(temp, "%s", m_Name.c_str());
 			m_Name = string;
+			sprintf_s(sendBuffer, "User [ %s ] change name to [%s].", temp,m_Name.c_str());
+			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			break;
 		case PKT_CHAT:
 			sprintf_s(sendBuffer, "[ %s ] : %s", m_Name.c_str(), string);
 			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			break;
 		case PKT_DISCONNECT:
+			sprintf_s(sendBuffer, "User [ %s ] disconnected.", m_Name.c_str());
+			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			ClientManager::getInstance()->removeClient(this);
 			return;
 		}
 
-		packetLength = 0;
-		m_Buffer.peek(&packetLength, 1);
+		stringLength = 0;
+		m_Buffer.peek(&stringLength, 1);
 	}
 }
 

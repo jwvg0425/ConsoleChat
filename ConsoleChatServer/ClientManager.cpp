@@ -29,7 +29,7 @@ bool ClientManager::addClient(Client* client)
 		return false;
 
 	//이미 해당 소켓에 클라 존재하는지 확인
-	if (m_Clients.find(client->getSocket()) != m_Clients.end())
+	if (m_Clients.find(client->getSocket()) == m_Clients.end())
 	{
 		m_Clients[client->getSocket()] = client;
 		return true;

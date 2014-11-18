@@ -11,7 +11,7 @@ class ClientManager
 {
 public:
 	static ClientManager*		getInstance();
-	void						releaseInstance();
+	static void					releaseInstance();
 	bool						addClient(Client* client);
 	bool						removeClient(Client* client);
 	void						broadcast(char* buf, size_t bytes);
