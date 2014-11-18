@@ -20,7 +20,8 @@ public:
 	void		connect();
 	void		disconnect();
 	void		recv();
-	void		send();
+	void		send(char* buffer, size_t bytes);
+	void		update(char* buffer, size_t bytes);
 
 private:
 	SOCKET		m_Socket;

@@ -11,6 +11,25 @@
 #define BUF_SIZE 1024
 #define MAX_NAME_LENGTH 16
 
+struct IOContext
+{
+	IOContext()
+		:buf(nullptr), recv(false)
+	{
+		ZeroMemory(&overlapped, sizeof(WSAOVERLAPPED));
+	}
+
+	~IOContext()
+	{
+		if (buf)
+			delete[] buf;
+	}
+
+	WSAOVERLAPPED overlapped;
+	char* buf;
+	bool recv;
+};
+
 
 //패킷 타입 정의
 

@@ -63,3 +63,26 @@ Client* ClientManager::getClient(SOCKET socket)
 {
 	return m_Clients[socket];
 }
+
+ClientManager::ClientManager()
+{
+	m_Clients.clear();
+}
+
+ClientManager::~ClientManager()
+{
+	for (auto& client : m_Clients)
+	{
+		removeClient(client.second);
+	}
+
+	m_Clients.clear();
+}
+
+void ClientManager::broadcast(char* buf, size_t bytes)
+{
+	for (auto& client : m_Clients)
+	{
+		client.second->send(buf, bytes);
+	}
+}
