@@ -44,7 +44,7 @@ bool ClientManager::removeClient(Client* client)
 		return false;
 
 	//해당 소켓에 클라 존재하는지 확인
-	if (m_Clients.find(client->getSocket()) == m_Clients.end())
+	if (m_Clients.find(client->getSocket()) != m_Clients.end())
 	{
 		//해당 소켓에 존재하는 클라가 인자로 넘어온 클라랑 동일 -> 올바른 삭제.
 		if (m_Clients[client->getSocket()] == client)
@@ -81,6 +81,7 @@ ClientManager::~ClientManager()
 
 void ClientManager::broadcast(char* buf, size_t bytes)
 {
+	printf("%s", buf + 2);
 	for (auto& client : m_Clients)
 	{
 		client.second->send(buf, bytes);

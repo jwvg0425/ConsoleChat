@@ -7,6 +7,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ConsoleChatServer", "Consol
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ConsoleChatClient", "ConsoleChatClient\ConsoleChatClient.vcxproj", "{22160FA6-72F6-4D16-B44C-F00E476E9783}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{68A70E22-7A5C-4E3B-A108-DE5869E5D213}"
+	ProjectSection(SolutionItems) = preProject
+		PacketType.h = PacketType.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32

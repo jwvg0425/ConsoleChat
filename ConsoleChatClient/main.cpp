@@ -4,14 +4,19 @@
 #include <Windows.h>
 #include <process.h>
 #include <conio.h>
+#include "../PacketType.h"
+#include "Buffer.h"
 
 #pragma comment(lib,"ws2_32.lib")
 #define BUF_SIZE 1024
 
 void ErrorHandling(char* message);
-unsigned int WINAPI EchoThreadMain(LPVOID param);
+unsigned int WINAPI PrintThreadMain(LPVOID param);
 void printMessage();
 void printInputMessage();
+void parsingMessage(SOCKET hSocket);
+void printTemplate();
+
 char history[2000][BUF_SIZE];
 int message_num = 0;
 int input_num = 0;
@@ -60,33 +65,35 @@ int main(int argc, char* argv[])
 	scanf("%s", name);
 	sprintf(inputMessage + 2, "%s", name);
 	inputMessage[0] = strlen(name);
-	inputMessage[1] = 3;
+	inputMessage[1] = PKT_CONNECT;
 	send(hSocket, inputMessage, strlen(inputMessage), 0);
 	system("cls");
+	printTemplate();
 
-	_beginthreadex(NULL, 0, EchoThreadMain, (LPVOID)hSocket, 0, NULL);
+	_beginthreadex(NULL, 0, PrintThreadMain, (LPVOID)hSocket, 0, NULL);
 
 	while (1)
 	{
-		char buffer[BUF_SIZE];
+		inputMessage[0] = '\0';
 		while (1)
 		{
 			char ch;
 
 			printInputMessage();
 			ch = getch();
-			if (ch == 8)
+			if (ch == 8 && input_num>0)
 			{
 				input_num--;
+				inputMessage[input_num] = '\0';
 			}
 			else
 			{
 				inputMessage[input_num++] = ch;
+				inputMessage[input_num] = '\0';
 			}
 
 			if (ch == '\r')
 			{
-				fflush(stdin);
 				inputMessage[input_num - 1] = '\n';
 				inputMessage[input_num] = 0;
 				input_num = 0;
@@ -94,17 +101,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		if (!strcmp(inputMessage, "q\n") || !strcmp(inputMessage, "Q\n"))
-		{
-			break;
-		}
-
-		sprintf(buffer, "%s", inputMessage);
-		sprintf(inputMessage + 2, "%s", buffer);
-		inputMessage[0] = strlen(buffer);
-		inputMessage[1] = 1;
-		strLen = strlen(inputMessage);
-		send(hSocket, inputMessage, strlen(inputMessage), 0);
+		parsingMessage(hSocket);
 	}
 
 	closesocket(hSocket);
@@ -119,34 +116,54 @@ void ErrorHandling(char* message)
 	exit(1);
 }
 
-unsigned int WINAPI EchoThreadMain(LPVOID param)
+unsigned int WINAPI PrintThreadMain(LPVOID param)
 {
-	int readLen = 0;
 	SOCKET hSocket = (SOCKET)param;
+	Buffer buffer(BUF_SIZE);
 	char message[BUF_SIZE] = { 0, };
+	int readLen = 0;
 
-	while (1)
+	while (true)
 	{
-		readLen = 0;
-		while (1)
+		readLen = recv(hSocket, message, BUF_SIZE - 1, 0);
+		if (readLen <= 0)
+			continue;
+
+		buffer.write(message, readLen);
+
+		char stringLength = 0;
+		char string[BUF_SIZE] = { 0, };
+		PacketType type;
+
+		buffer.peek(&stringLength, 1);
+
+		while (stringLength <= (int)buffer.getUsingBytes() - 2)
 		{
-			readLen += recv(hSocket, &message[readLen], BUF_SIZE - 1, 0);
+			buffer.read(&stringLength, 1);
+			buffer.read(&type, 1);
 
-			for (int i = 0; i < readLen; i++)
+			//패킷 완성되는 크기만큼 읽어들인다.
+			buffer.read(string, stringLength);
+
+			switch (type)
 			{
-				if (message[i] == '\n')
-				{
-					goto PRINT;
-				}
+			case PKT_CHAT:
+				strcpy(history[message_num], string);
+				message_num++;
+
+				printMessage();
+				break;
+			case PKT_LIST:
+				break;
+			case PKT_JOIN:
+				break;
+			case PKT_OUT:
+				break;
 			}
+
+			stringLength = 0;
+			buffer.peek(&stringLength, 1);
 		}
-	PRINT:
-		message[readLen] = 0;
-
-		strcpy(history[message_num], message);
-		message_num++;
-
-		printMessage();
 	}
 
 	return 0;
@@ -155,19 +172,73 @@ unsigned int WINAPI EchoThreadMain(LPVOID param)
 void printMessage()
 {
 	system("cls");
-	for (int i = ((message_num >= 18) ? message_num - 18 : 0); i < message_num; i++)
+	int startNum = ((message_num >= 18) ? message_num - 18 : 0);
+
+	for (int i = startNum; i < message_num; i++)
 	{
-		fputs(history[i], stdout);
+		gotoxy(3, 2 + i - startNum);
+		printf("%s",history[i]);
 	}
 	printInputMessage();
 }
 
 void printInputMessage()
 {
-	gotoxy(0, 20);
-	fputs("Input message(Q to quit): ", stdout);
-	for (int i = 0; i < input_num; i++)
+	gotoxy(0, 22);
+	printf("  %s  ", inputMessage);
+}
+
+void parsingMessage(SOCKET hSocket)
+{
+	char buffer[BUF_SIZE];
+	int strLen;
+
+	//종료
+	if (!strncmp(inputMessage, "/quit", 5))
 	{
-		fputc(inputMessage[i], stdout);
+		exit(0);
 	}
+	else if (!strncmp(inputMessage, "/name ", 6))
+	{
+		inputMessage[1] = PKT_CHANGE_NAME;
+		sprintf(buffer, "%s", inputMessage + 6);
+		buffer[strlen(buffer) - 1] = '\0';
+		inputMessage[0] = strlen(buffer);
+		sprintf(inputMessage + 2, "%s", buffer);
+	}
+	else
+	{
+		sprintf(buffer, "%s", inputMessage);
+		sprintf(inputMessage + 2, "%s", buffer);
+		inputMessage[0] = strlen(buffer);
+		inputMessage[1] = PKT_CHAT;
+	}
+
+	strLen = strlen(inputMessage + 2) + 2;
+	send(hSocket, inputMessage, strlen(inputMessage), 0);
+}
+
+void printTemplate()
+{
+	gotoxy(0, 1);
+	printf("┌");
+	for (int i = 0; i < 30; i++)
+	{
+		printf("─");
+	}
+	printf("┐");
+	for (int i = 0; i < 20; i++)
+	{
+		gotoxy(0, 2 + i);
+		printf("│");
+		gotoxy(62, 2 + i);
+		printf("│");
+	}
+	gotoxy(0, 21);
+	printf("└");
+	for (int i = 0; i < 30; i++)
+	{
+		printf("─");
+	}
+	printf("┘");
 }

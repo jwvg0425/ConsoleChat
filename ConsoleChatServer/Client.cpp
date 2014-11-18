@@ -76,22 +76,26 @@ void Client::update(char* buffer, size_t bytes)
 		{
 		case PKT_CONNECT:
 			m_Name = string;
-			sprintf_s(sendBuffer, "User [ %s ] entered.", m_Name.c_str());
+			sprintf(sendBuffer + 2, "User [ %s ] entered.\n", m_Name.c_str());
+			sendBuffer[0] = strlen(sendBuffer + 2);
+			sendBuffer[1] = PKT_CHAT;
 			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			break;
 		case PKT_CHANGE_NAME:
-			sprintf_s(temp, "%s", m_Name.c_str());
+			sprintf(temp, "%s", m_Name.c_str());
 			m_Name = string;
-			sprintf_s(sendBuffer, "User [ %s ] change name to [%s].", temp,m_Name.c_str());
+			sprintf(sendBuffer + 2, "User [ %s ] change name to [%s].\n", temp,m_Name.c_str());
+			sendBuffer[0] = strlen(sendBuffer + 2);
+			sendBuffer[1] = PKT_CHAT;
 			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			break;
 		case PKT_CHAT:
-			sprintf_s(sendBuffer, "[ %s ] : %s", m_Name.c_str(), string);
+			sprintf(sendBuffer + 2, "[ %s ] : %s", m_Name.c_str(), string);
+			sendBuffer[0] = strlen(sendBuffer + 2);
+			sendBuffer[1] = PKT_CHAT;
 			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			break;
 		case PKT_DISCONNECT:
-			sprintf_s(sendBuffer, "User [ %s ] disconnected.", m_Name.c_str());
-			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			ClientManager::getInstance()->removeClient(this);
 			return;
 		}
@@ -108,5 +112,10 @@ void Client::connect()
 
 void Client::disconnect()
 {
+	char sendBuffer[BUF_SIZE];
 
+	sprintf(sendBuffer + 2, "User [ %s ] disconnected.\n", m_Name.c_str());
+	sendBuffer[0] = strlen(sendBuffer + 2);
+	sendBuffer[1] = PKT_CHAT;
+	ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 }
