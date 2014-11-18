@@ -7,15 +7,26 @@
 
 #include "TypeDefine.h"
 #include "Buffer.h"
+#include <string>
 
 class Client
 {
 public:
+	Client();
+	Client(SOCKET socket);
+	~Client();
+
+	SOCKET		getSocket() const;
+	void		connect();
+	void		disconnect();
+	void		recv();
+	void		send();
+
 private:
-	SOCKET socket;
-	Buffer m_Buffer;
-	bool m_IsConnected;
-	char name[MAX_NAME_LENGTH];
+	SOCKET		m_Socket;
+	Buffer		m_Buffer;
+	bool		m_IsConnected;
+	std::string m_Name;
 };
 
 #endif

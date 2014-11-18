@@ -11,16 +11,16 @@ class Buffer
 public:
 	Buffer(int bufferSize);
 	~Buffer();
-	bool write(const char* data, size_t bytes);
-	bool read(OUT char* destBuf, size_t bytes);
-	bool peek(OUT char* destBuf, size_t bytes) const;
-	bool remove(size_t bytes);
-	size_t getUsingBytes();
+	bool			write(const char* data, size_t bytes);
+	bool			read(OUT char* destBuf, size_t bytes);
+	bool			peek(OUT char* destBuf, size_t bytes) const;
+	bool			remove(size_t bytes);
+	size_t			getUsingBytes();
 
 private:
-	size_t m_BufferSize;
-	size_t m_UsingBytes;
-	char* m_Buffer;
+	size_t			m_BufferSize;
+	size_t			m_UsingBytes;
+	char*			m_Buffer;
 };
 
 #endif
