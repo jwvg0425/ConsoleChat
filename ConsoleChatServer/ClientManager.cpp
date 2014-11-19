@@ -84,6 +84,9 @@ void ClientManager::broadcast(char* buf, size_t bytes)
 	printf("%s", buf + 2);
 	for (auto& client : m_Clients)
 	{
-		client.second->send(buf, bytes);
+		if (client.second->isConnected())
+		{
+			client.second->send(buf, bytes);
+		}
 	}
 }

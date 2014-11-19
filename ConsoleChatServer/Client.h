@@ -22,6 +22,7 @@ public:
 	void		recv();
 	void		send(char* buffer, size_t bytes);
 	void		update(char* buffer, size_t bytes);
+	bool		isConnected();
 
 private:
 	SOCKET		m_Socket;

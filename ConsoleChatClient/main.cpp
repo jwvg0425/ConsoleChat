@@ -22,6 +22,7 @@ int message_num = 0;
 int input_num = 0;
 char inputMessage[BUF_SIZE];
 char name[BUF_SIZE];
+CRITICAL_SECTION globalCriticalSection;
 
 void gotoxy(int x, int y)
 {
@@ -37,6 +38,7 @@ int main(int argc, char* argv[])
 
 	int strLen = 0, readLen = 0;
 
+	InitializeCriticalSection(&globalCriticalSection);
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
@@ -68,7 +70,6 @@ int main(int argc, char* argv[])
 	inputMessage[1] = PKT_CONNECT;
 	send(hSocket, inputMessage, strlen(inputMessage), 0);
 	system("cls");
-	printTemplate();
 
 	_beginthreadex(NULL, 0, PrintThreadMain, (LPVOID)hSocket, 0, NULL);
 
@@ -78,8 +79,10 @@ int main(int argc, char* argv[])
 		while (1)
 		{
 			char ch;
-
+			EnterCriticalSection(&globalCriticalSection);
 			printInputMessage();
+			LeaveCriticalSection(&globalCriticalSection);
+
 			ch = getch();
 			if (ch == 8 && input_num>0)
 			{
@@ -103,6 +106,8 @@ int main(int argc, char* argv[])
 
 		parsingMessage(hSocket);
 	}
+
+	DeleteCriticalSection(&globalCriticalSection);
 
 	closesocket(hSocket);
 	WSACleanup();
@@ -151,7 +156,9 @@ unsigned int WINAPI PrintThreadMain(LPVOID param)
 				strcpy(history[message_num], string);
 				message_num++;
 
+				EnterCriticalSection(&globalCriticalSection);
 				printMessage();
+				LeaveCriticalSection(&globalCriticalSection);
 				break;
 			case PKT_LIST:
 				break;
@@ -171,11 +178,14 @@ unsigned int WINAPI PrintThreadMain(LPVOID param)
 
 void printMessage()
 {
-	system("cls");
+	printTemplate();
+
 	int startNum = ((message_num >= 18) ? message_num - 18 : 0);
 
 	for (int i = startNum; i < message_num; i++)
 	{
+		gotoxy(3, 2 + i - startNum);
+		printf("%58c", ' ');
 		gotoxy(3, 2 + i - startNum);
 		printf("%s",history[i]);
 	}
@@ -184,8 +194,10 @@ void printMessage()
 
 void printInputMessage()
 {
-	gotoxy(0, 22);
-	printf("  %s  ", inputMessage);
+	gotoxy(3, 23);
+	printf("%58c", ' ');
+	gotoxy(3, 23);
+	printf("%s  ", inputMessage);
 }
 
 void parsingMessage(SOCKET hSocket)
@@ -205,6 +217,9 @@ void parsingMessage(SOCKET hSocket)
 		buffer[strlen(buffer) - 1] = '\0';
 		inputMessage[0] = strlen(buffer);
 		sprintf(inputMessage + 2, "%s", buffer);
+	}
+	else if (!strncmp(inputMessage, "/help", 5))
+	{
 	}
 	else
 	{
@@ -235,6 +250,25 @@ void printTemplate()
 		printf("│");
 	}
 	gotoxy(0, 21);
+	printf("└");
+	for (int i = 0; i < 30; i++)
+	{
+		printf("─");
+	}
+	printf("┘");
+
+	gotoxy(0, 22);
+	printf("┌");
+	for (int i = 0; i < 30; i++)
+	{
+		printf("─");
+	}
+	printf("┐");
+	gotoxy(0, 23);
+	printf("│");
+	gotoxy(62, 23);
+	printf("│");
+	gotoxy(0, 24);
 	printf("└");
 	for (int i = 0; i < 30; i++)
 	{

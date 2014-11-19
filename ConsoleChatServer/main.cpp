@@ -14,6 +14,7 @@
 void ErrorHandling(char* message);
 
 unsigned int WINAPI IOCPThreadMain(LPVOID completionPortIO);
+CRITICAL_SECTION globalCriticalSection;
 
 int main(int argc, char* argv[])
 {
@@ -23,6 +24,8 @@ int main(int argc, char* argv[])
 	SOCKET hServSock;
 	SOCKADDR_IN servAdr;
 	DWORD flags = 0;
+
+	InitializeCriticalSection(&globalCriticalSection);
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		ErrorHandling("WSAStartup() error!");
@@ -79,6 +82,8 @@ int main(int argc, char* argv[])
 	CloseHandle(hComPort);
 	closesocket(hServSock);
 	WSACleanup();
+
+	DeleteCriticalSection(&globalCriticalSection);
 
 	return 0;
 

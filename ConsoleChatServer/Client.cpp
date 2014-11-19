@@ -79,6 +79,7 @@ void Client::update(char* buffer, size_t bytes)
 			sprintf(sendBuffer + 2, "User [ %s ] entered.\n", m_Name.c_str());
 			sendBuffer[0] = strlen(sendBuffer + 2);
 			sendBuffer[1] = PKT_CHAT;
+			m_IsConnected = true;
 			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			break;
 		case PKT_CHANGE_NAME:
@@ -118,4 +119,9 @@ void Client::disconnect()
 	sendBuffer[0] = strlen(sendBuffer + 2);
 	sendBuffer[1] = PKT_CHAT;
 	ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
+}
+
+bool Client::isConnected()
+{
+	return m_IsConnected;
 }
