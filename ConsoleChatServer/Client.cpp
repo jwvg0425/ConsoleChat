@@ -6,14 +6,14 @@ Client::Client() : m_Buffer(BUF_SIZE)
 {
 	m_Socket = INVALID_SOCKET;
 	m_IsConnected = false;
-	m_Name = "a​nonymous";
+	m_Name = "anonymous";
 }
 
 Client::Client(SOCKET socket) : m_Buffer(BUF_SIZE)
 {
 	m_Socket = socket;
 	m_IsConnected = false;
-	m_Name = "a​nonymous";
+	m_Name = "anonymous";
 }
 
 Client::~Client()

@@ -14,8 +14,6 @@ Buffer::~Buffer()
 
 bool Buffer::write(const char* data, size_t bytes)
 {
-	EnterCriticalSection(&globalCriticalSection);
-
 	size_t remainBytes = m_BufferSize - m_UsingBytes;
 
 	if (remainBytes >= bytes)
@@ -27,13 +25,10 @@ bool Buffer::write(const char* data, size_t bytes)
 	}
 
 	return false;
-
-	LeaveCriticalSection(&globalCriticalSection);
 }
 
 bool Buffer::read(OUT char* destBuf, size_t bytes)
 {
-	EnterCriticalSection(&globalCriticalSection);
 
 	if (m_UsingBytes >= bytes)
 	{
@@ -45,7 +40,6 @@ bool Buffer::read(OUT char* destBuf, size_t bytes)
 
 	return false;
 
-	LeaveCriticalSection(&globalCriticalSection);
 }
 
 bool Buffer::peek(OUT char* destBuf, size_t bytes) const
@@ -61,7 +55,6 @@ bool Buffer::peek(OUT char* destBuf, size_t bytes) const
 
 bool Buffer::remove(size_t bytes)
 {
-	EnterCriticalSection(&globalCriticalSection);
 
 	if (m_UsingBytes >= bytes)
 	{
@@ -72,8 +65,6 @@ bool Buffer::remove(size_t bytes)
 	}
 
 	return false;
-
-	LeaveCriticalSection(&globalCriticalSection);
 }
 
 size_t Buffer::getUsingBytes()

@@ -6,9 +6,15 @@
 #include <conio.h>
 #include "../PacketType.h"
 #include "Buffer.h"
+#include <deque>
 
 #pragma comment(lib,"ws2_32.lib")
 #define BUF_SIZE 1024
+#define MAX_INPUT_NUM 40
+#define MAX_NAME_LENGTH 10
+#define LOG_WIDTH 60
+#define LOG_HEIGHT 20
+#define HELP_NUM 7
 
 void ErrorHandling(char* message);
 unsigned int WINAPI PrintThreadMain(LPVOID param);
@@ -17,12 +23,22 @@ void printInputMessage();
 void parsingMessage(SOCKET hSocket);
 void printTemplate();
 
-char history[2000][BUF_SIZE];
-int message_num = 0;
-int input_num = 0;
+std::deque<std::string> logs;
+int inputNum = 0;
 char inputMessage[BUF_SIZE];
 char name[BUF_SIZE];
 CRITICAL_SECTION globalCriticalSection;
+
+char* helpList[HELP_NUM] =
+{
+	"*********************************************",
+	"/name <name> : change your name",
+	"/help : show how to use this program",
+	"/quit : exit this program",
+	"have a good chatting!",
+	"made by Nam HyeonWook in NHN NEXT, 2014.",
+	"*********************************************",
+};
 
 void gotoxy(int x, int y)
 {
@@ -43,6 +59,7 @@ int main(int argc, char* argv[])
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
 		ErrorHandling("WSAStartup() error!");
+		return -1;
 	}
 
 	hSocket = socket(PF_INET, SOCK_STREAM, 0);
@@ -50,21 +67,42 @@ int main(int argc, char* argv[])
 	if (hSocket == INVALID_SOCKET)
 	{
 		ErrorHandling("socket() error!");
+		return -1;
 	}
 
 	memset(&servAddr, 0, sizeof(servAddr));
 
 	servAddr.sin_family = AF_INET;
+
+#ifdef _DEBUG
 	servAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	servAddr.sin_port = htons(atoi("41026"));
+#else
+	if (argc != 3)
+	{
+		printf("USAGE : %s <IP> <PORT>", argv[0]);
+		return -1;
+	}
+	servAddr.sin_addr.s_addr = inet_addr(argv[1]);
+	servAddr.sin_port = htons(atoi(argv[2]));
+
+#endif
 
 	if (connect(hSocket, (SOCKADDR*)&servAddr, sizeof(servAddr)) == SOCKET_ERROR)
 	{
 		ErrorHandling("connect() error!");
+		return -1;
 	}
 
 	printf("input your name:");
 	scanf("%s", name);
+
+	while (strlen(name) > MAX_NAME_LENGTH + 1)
+	{
+		printf("Name length must be less than %d.\n", MAX_NAME_LENGTH);
+		printf("input your name:");
+		scanf("%s", name);
+	}
 	sprintf(inputMessage + 2, "%s", name);
 	inputMessage[0] = strlen(name);
 	inputMessage[1] = PKT_CONNECT;
@@ -84,22 +122,22 @@ int main(int argc, char* argv[])
 			LeaveCriticalSection(&globalCriticalSection);
 
 			ch = getch();
-			if (ch == 8 && input_num>0)
+			if (ch == 8 && inputNum>0)
 			{
-				input_num--;
-				inputMessage[input_num] = '\0';
+				inputNum--;
+				inputMessage[inputNum] = '\0';
 			}
-			else
+			else if (inputNum < MAX_INPUT_NUM)
 			{
-				inputMessage[input_num++] = ch;
-				inputMessage[input_num] = '\0';
+				inputMessage[inputNum++] = ch;
+				inputMessage[inputNum] = '\0';
 			}
 
 			if (ch == '\r')
 			{
-				inputMessage[input_num - 1] = '\n';
-				inputMessage[input_num] = 0;
-				input_num = 0;
+				inputMessage[inputNum - 1] = '\n';
+				inputMessage[inputNum] = 0;
+				inputNum = 0;
 				break;
 			}
 		}
@@ -153,18 +191,11 @@ unsigned int WINAPI PrintThreadMain(LPVOID param)
 			switch (type)
 			{
 			case PKT_CHAT:
-				strcpy(history[message_num], string);
-				message_num++;
+				logs.push_back(string);
 
 				EnterCriticalSection(&globalCriticalSection);
 				printMessage();
 				LeaveCriticalSection(&globalCriticalSection);
-				break;
-			case PKT_LIST:
-				break;
-			case PKT_JOIN:
-				break;
-			case PKT_OUT:
 				break;
 			}
 
@@ -180,14 +211,18 @@ void printMessage()
 {
 	printTemplate();
 
-	int startNum = ((message_num >= 18) ? message_num - 18 : 0);
-
-	for (int i = startNum; i < message_num; i++)
+	// 최대 저장 로그 개수 넘어가면 오래된것부터 제거.
+	while (logs.size() > LOG_HEIGHT - 2)
 	{
-		gotoxy(3, 2 + i - startNum);
+		logs.pop_front();
+	}
+
+	for (int i = 0; i < logs.size(); i++)
+	{
+		gotoxy(3, 2 + i);
 		printf("%58c", ' ');
-		gotoxy(3, 2 + i - startNum);
-		printf("%s",history[i]);
+		gotoxy(3, 2 + i);
+		printf("%s",logs[i].c_str());
 	}
 	printInputMessage();
 }
@@ -214,12 +249,32 @@ void parsingMessage(SOCKET hSocket)
 	{
 		inputMessage[1] = PKT_CHANGE_NAME;
 		sprintf(buffer, "%s", inputMessage + 6);
+
+		//이름의 길이가 긴 경우 거부.
+		if (strlen(buffer) > MAX_NAME_LENGTH + 1)
+		{
+			sprintf(buffer, "Name length must be less than %d.", MAX_NAME_LENGTH);
+			logs.push_back(buffer);
+
+			EnterCriticalSection(&globalCriticalSection);
+			printMessage();
+			LeaveCriticalSection(&globalCriticalSection);
+			return;
+		}
 		buffer[strlen(buffer) - 1] = '\0';
 		inputMessage[0] = strlen(buffer);
 		sprintf(inputMessage + 2, "%s", buffer);
 	}
 	else if (!strncmp(inputMessage, "/help", 5))
 	{
+		for (int i = 0; i < HELP_NUM; i++)
+		{
+			logs.push_back(helpList[i]);
+		}
+		EnterCriticalSection(&globalCriticalSection);
+		printMessage();
+		LeaveCriticalSection(&globalCriticalSection);
+		return;
 	}
 	else
 	{
@@ -237,40 +292,40 @@ void printTemplate()
 {
 	gotoxy(0, 1);
 	printf("┌");
-	for (int i = 0; i < 30; i++)
+	for (int i = 0; i < LOG_WIDTH / 2; i++)
 	{
 		printf("─");
 	}
 	printf("┐");
-	for (int i = 0; i < 20; i++)
+	for (int i = 0; i < LOG_HEIGHT; i++)
 	{
 		gotoxy(0, 2 + i);
 		printf("│");
-		gotoxy(62, 2 + i);
+		gotoxy(LOG_WIDTH + 2, 2 + i);
 		printf("│");
 	}
-	gotoxy(0, 21);
+	gotoxy(0, LOG_HEIGHT + 1);
 	printf("└");
-	for (int i = 0; i < 30; i++)
+	for (int i = 0; i < LOG_WIDTH / 2; i++)
 	{
 		printf("─");
 	}
 	printf("┘");
 
-	gotoxy(0, 22);
+	gotoxy(0, LOG_HEIGHT + 2);
 	printf("┌");
-	for (int i = 0; i < 30; i++)
+	for (int i = 0; i < LOG_WIDTH / 2; i++)
 	{
 		printf("─");
 	}
 	printf("┐");
-	gotoxy(0, 23);
+	gotoxy(0, LOG_HEIGHT + 3);
 	printf("│");
-	gotoxy(62, 23);
+	gotoxy(LOG_WIDTH + 2, LOG_HEIGHT + 3);
 	printf("│");
-	gotoxy(0, 24);
+	gotoxy(0, LOG_HEIGHT + 4);
 	printf("└");
-	for (int i = 0; i < 30; i++)
+	for (int i = 0; i < LOG_WIDTH / 2; i++)
 	{
 		printf("─");
 	}

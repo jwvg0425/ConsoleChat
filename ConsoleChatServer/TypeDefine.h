@@ -10,8 +10,6 @@
 //출력용 인수 표시
 #define OUT
 #define BUF_SIZE 1024
-#define MAX_NAME_LENGTH 16
-extern CRITICAL_SECTION globalCriticalSection;
 
 struct IOContext
 {

@@ -25,22 +25,30 @@ int main(int argc, char* argv[])
 	SOCKADDR_IN servAdr;
 	DWORD flags = 0;
 
-	InitializeCriticalSection(&globalCriticalSection);
-
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+	{
 		ErrorHandling("WSAStartup() error!");
+		return -1;
+	}
 
 	hComPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
 	_beginthreadex(NULL, 0, IOCPThreadMain, (LPVOID)hComPort, 0, NULL);
 
 	hServSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	
+	if (hServSock == INVALID_SOCKET)
+	{
+		ErrorHandling("WSASocket() error!");
+		return -1;
+	}
+	
 	memset(&servAdr, 0, sizeof(servAdr));
 	servAdr.sin_family = AF_INET;
 	servAdr.sin_addr.s_addr = htonl(INADDR_ANY);
 #ifdef _DEBUG
 	servAdr.sin_port = htons(atoi("41026"));
-#elif
+#else
 	if (argc != 2)
 	{
 		printf("USAGE : %s <PORT>", argv[0]);
@@ -51,10 +59,23 @@ int main(int argc, char* argv[])
 #endif
 
 	char option = 1;
-	setsockopt(hServSock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+	if (setsockopt(hServSock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)))
+	{
+		ErrorHandling("setsockopt() error!");
+		return -1;
+	}
 
-	bind(hServSock, (SOCKADDR*)&servAdr, sizeof(servAdr));
-	listen(hServSock, 5);
+	if (bind(hServSock, (SOCKADDR*)&servAdr, sizeof(servAdr)))
+	{
+		ErrorHandling("bind() error!");
+		return -1;
+	}
+
+	if (listen(hServSock, 5))
+	{
+		ErrorHandling("bind() error!");
+		return -1;
+	}
 
 	while (true)
 	{
@@ -71,7 +92,11 @@ int main(int argc, char* argv[])
 
 		Client* client = new Client(hClntSock);
 
-		CreateIoCompletionPort((HANDLE)hClntSock, hComPort, (ULONG_PTR)client, 0);
+		if (CreateIoCompletionPort((HANDLE)hClntSock, hComPort, (ULONG_PTR)client, 0) != hComPort)
+		{
+			ErrorHandling("CreateIoCompletionPort() error!");
+			continue;
+		}
 
 		ClientManager::getInstance()->addClient(client);
 
@@ -82,8 +107,6 @@ int main(int argc, char* argv[])
 	CloseHandle(hComPort);
 	closesocket(hServSock);
 	WSACleanup();
-
-	DeleteCriticalSection(&globalCriticalSection);
 
 	return 0;
 
@@ -99,7 +122,17 @@ unsigned WINAPI IOCPThreadMain(LPVOID pComPort)
 
 	while (true)
 	{
-		GetQueuedCompletionStatus(hComPort, &bytesTrans, (PULONG_PTR)&client, (LPOVERLAPPED*)&context, INFINITE);
+		if (!GetQueuedCompletionStatus(hComPort, &bytesTrans,
+			(PULONG_PTR)&client, (LPOVERLAPPED*)&context, INFINITE))
+		{
+			int error = GetLastError();
+
+			if (error != ERROR_NETNAME_DELETED)
+			{
+				ErrorHandling("GetQueuedCompletionStatus() error!");
+				break;
+			}
+		}
 
 		if (context->recv)
 		{

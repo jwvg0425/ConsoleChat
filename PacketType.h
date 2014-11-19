@@ -11,9 +11,4 @@ typedef char PacketType;
 #define	PKT_DISCONNECT	3 //연결 종료 요청
 #define PKT_CONNECT		4 //연결 요청
 
-//서버 -> 클라
-#define PKT_LIST		5 // 접속해 있는 사람 목록
-#define PKT_JOIN		6 // 새로 사람 접속
-#define PKT_OUT			7 // 사람 한 명 나감
-
 #endif
