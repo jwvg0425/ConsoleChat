@@ -16,6 +16,10 @@ public:
 	bool						removeClient(Client* client);
 	void						broadcast(char* buf, size_t bytes);
 	Client*						getClient(SOCKET socket);
+	std::string					getNames();
+	int							getClientNum();
+	int							isPossibleConnect(Client* client);
+	bool						existEqualName(std::string name);
 
 private:
 	static ClientManager*		m_Instance;

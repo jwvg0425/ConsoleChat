@@ -81,7 +81,11 @@ ClientManager::~ClientManager()
 
 void ClientManager::broadcast(char* buf, size_t bytes)
 {
-	printf("%s", buf + 2);
+	if (buf[TYPE_BIT] != PKT_UPDATE_LIST)
+	{
+		printf("%s", buf + 2);
+	}
+
 	for (auto& client : m_Clients)
 	{
 		if (client.second->isConnected())
@@ -89,4 +93,69 @@ void ClientManager::broadcast(char* buf, size_t bytes)
 			client.second->send(buf, bytes);
 		}
 	}
+}
+
+std::string ClientManager::getNames()
+{
+	std::string names = "";
+	for (auto& client : m_Clients)
+	{
+		if (client.second->isConnected())
+		{
+			names += client.second->getName() + '\n';
+		}
+	}
+
+	return names;
+}
+
+int ClientManager::getClientNum()
+{
+	int num = 0;
+
+	for (auto& client : m_Clients)
+	{
+		if (client.second->isConnected())
+		{
+			num++;
+		}
+	}
+
+	return num;
+}
+
+int ClientManager::isPossibleConnect(Client* client)
+{
+	if (getClientNum() >= MAX_CLIENT_NUM)
+	{
+		return PERMISSION_SERVER_FULL;
+	}
+
+	if (strlen(client->getName().c_str()) >= MAX_NAME_LENGTH)
+	{
+		return PERMISSION_TOO_LONG_NAME;
+	}
+
+	if (existEqualName(client->getName()))
+	{
+		return PERMISSION_EQUAL_NAME;
+	}
+
+	return PERMISSION_OK;
+}
+
+bool ClientManager::existEqualName(std::string name)
+{
+	for (auto& client : m_Clients)
+	{
+		if (client.second->isConnected())
+		{
+			if (name == client.second->getName())
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
 }

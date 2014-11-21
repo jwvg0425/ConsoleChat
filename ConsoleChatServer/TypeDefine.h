@@ -11,6 +11,10 @@
 #define OUT
 #define BUF_SIZE 1024
 
+#define LENGTH_BIT 0
+#define TYPE_BIT 1
+#define MAX_CLIENT_NUM 3
+
 struct IOContext
 {
 	IOContext()

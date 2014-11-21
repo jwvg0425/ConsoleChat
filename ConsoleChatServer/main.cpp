@@ -9,9 +9,7 @@
 
 #pragma comment(lib,"ws2_32.lib")
 
-#define BUF_SIZE 1024
-
-void ErrorHandling(char* message);
+void errorHandling(char* message);
 
 unsigned int WINAPI IOCPThreadMain(LPVOID completionPortIO);
 CRITICAL_SECTION globalCriticalSection;
@@ -27,7 +25,7 @@ int main(int argc, char* argv[])
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
-		ErrorHandling("WSAStartup() error!");
+		errorHandling("WSAStartup() error!");
 		return -1;
 	}
 
@@ -39,7 +37,7 @@ int main(int argc, char* argv[])
 	
 	if (hServSock == INVALID_SOCKET)
 	{
-		ErrorHandling("WSASocket() error!");
+		errorHandling("WSASocket() error!");
 		return -1;
 	}
 	
@@ -61,19 +59,19 @@ int main(int argc, char* argv[])
 	char option = 1;
 	if (setsockopt(hServSock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)))
 	{
-		ErrorHandling("setsockopt() error!");
+		errorHandling("setsockopt() error!");
 		return -1;
 	}
 
 	if (bind(hServSock, (SOCKADDR*)&servAdr, sizeof(servAdr)))
 	{
-		ErrorHandling("bind() error!");
+		errorHandling("bind() error!");
 		return -1;
 	}
 
 	if (listen(hServSock, 5))
 	{
-		ErrorHandling("bind() error!");
+		errorHandling("bind() error!");
 		return -1;
 	}
 
@@ -94,7 +92,7 @@ int main(int argc, char* argv[])
 
 		if (CreateIoCompletionPort((HANDLE)hClntSock, hComPort, (ULONG_PTR)client, 0) != hComPort)
 		{
-			ErrorHandling("CreateIoCompletionPort() error!");
+			errorHandling("CreateIoCompletionPort() error!");
 			continue;
 		}
 
@@ -129,7 +127,7 @@ unsigned WINAPI IOCPThreadMain(LPVOID pComPort)
 
 			if (error != ERROR_NETNAME_DELETED)
 			{
-				ErrorHandling("GetQueuedCompletionStatus() error!");
+				errorHandling("GetQueuedCompletionStatus() error!");
 				break;
 			}
 		}
@@ -153,7 +151,7 @@ unsigned WINAPI IOCPThreadMain(LPVOID pComPort)
 	return 0;
 }
 
-void ErrorHandling(char* message)
+void errorHandling(char* message)
 {
 	fputs(message, stderr);
 	fputc('\n', stderr);

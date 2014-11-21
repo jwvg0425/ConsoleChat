@@ -5,14 +5,14 @@
 Client::Client() : m_Buffer(BUF_SIZE)
 {
 	m_Socket = INVALID_SOCKET;
-	m_IsConnected = false;
+	m_IsEntered = false;
 	m_Name = "anonymous";
 }
 
 Client::Client(SOCKET socket) : m_Buffer(BUF_SIZE)
 {
 	m_Socket = socket;
-	m_IsConnected = false;
+	m_IsEntered = false;
 	m_Name = "anonymous";
 }
 
@@ -65,6 +65,7 @@ void Client::update(char* buffer, size_t bytes)
 	{
 		char string[BUF_SIZE] = { 0, };
 		char temp[BUF_SIZE] = { 0, };
+		int permission = 0;
 		PacketType type = 0;
 		m_Buffer.read(&stringLength, 1);
 		m_Buffer.read(&type, 1);
@@ -76,24 +77,55 @@ void Client::update(char* buffer, size_t bytes)
 		{
 		case PKT_CONNECT:
 			m_Name = string;
-			sprintf(sendBuffer + 2, "User [ %s ] entered.\n", m_Name.c_str());
-			sendBuffer[0] = strlen(sendBuffer + 2);
-			sendBuffer[1] = PKT_CHAT;
-			m_IsConnected = true;
-			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
+			
+			//접속 가능 여부 확인. 불가능한 경우 denied.
+			permission = ClientManager::getInstance()->isPossibleConnect(this);
+
+			sendBuffer[LENGTH_BIT] = 1;
+			sendBuffer[TYPE_BIT] = PKT_PERMISSION;
+			sendBuffer[TYPE_BIT + 1] = permission;
+			send(sendBuffer, 3);
+
+			if (permission == PERMISSION_OK)
+			{
+				sprintf(sendBuffer + 2, "User [ %s ] entered.\n", m_Name.c_str());
+				sendBuffer[LENGTH_BIT] = strlen(sendBuffer + 2);
+				sendBuffer[TYPE_BIT] = PKT_CHAT;
+				m_IsEntered = true;
+				sendNameList();
+				ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
+			}
 			break;
 		case PKT_CHANGE_NAME:
-			sprintf(temp, "%s", m_Name.c_str());
-			m_Name = string;
-			sprintf(sendBuffer + 2, "User [ %s ] change name to [%s].\n", temp,m_Name.c_str());
-			sendBuffer[0] = strlen(sendBuffer + 2);
-			sendBuffer[1] = PKT_CHAT;
-			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
+			if (strlen(string) >= MAX_NAME_LENGTH)
+			{
+				sprintf(sendBuffer + 2, "name must be less than %d.\n", MAX_NAME_LENGTH);
+				sendBuffer[LENGTH_BIT] = strlen(sendBuffer + 2);
+				sendBuffer[TYPE_BIT] = PKT_CHAT;
+				send(sendBuffer, strlen(sendBuffer));
+			}
+			else if (ClientManager::getInstance()->existEqualName(string))
+			{
+				sprintf(sendBuffer + 2, "already exist equal name.\n");
+				sendBuffer[LENGTH_BIT] = strlen(sendBuffer + 2);
+				sendBuffer[TYPE_BIT] = PKT_CHAT;
+				send(sendBuffer, strlen(sendBuffer));
+			}
+			else
+			{
+				sprintf(temp, "%s", m_Name.c_str());
+				m_Name = string;
+				sprintf(sendBuffer + 2, "User [ %s ] change name to [%s].\n", temp, m_Name.c_str());
+				sendBuffer[LENGTH_BIT] = strlen(sendBuffer + 2);
+				sendBuffer[TYPE_BIT] = PKT_CHAT;
+				sendNameList();
+				ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
+			}
 			break;
 		case PKT_CHAT:
 			sprintf(sendBuffer + 2, "[ %s ] : %s", m_Name.c_str(), string);
-			sendBuffer[0] = strlen(sendBuffer + 2);
-			sendBuffer[1] = PKT_CHAT;
+			sendBuffer[LENGTH_BIT] = strlen(sendBuffer + 2);
+			sendBuffer[TYPE_BIT] = PKT_CHAT;
 			ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 			break;
 		case PKT_DISCONNECT:
@@ -113,15 +145,34 @@ void Client::connect()
 
 void Client::disconnect()
 {
-	char sendBuffer[BUF_SIZE];
+	if (m_IsEntered)
+	{
+		char sendBuffer[BUF_SIZE];
 
-	sprintf(sendBuffer + 2, "User [ %s ] disconnected.\n", m_Name.c_str());
-	sendBuffer[0] = strlen(sendBuffer + 2);
-	sendBuffer[1] = PKT_CHAT;
-	ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
+		sprintf(sendBuffer + 2, "User [ %s ] disconnected.\n", m_Name.c_str());
+		sendBuffer[LENGTH_BIT] = strlen(sendBuffer + 2);
+		sendBuffer[TYPE_BIT] = PKT_CHAT;
+		ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
+		sendNameList();
+	}
 }
 
 bool Client::isConnected()
 {
-	return m_IsConnected;
+	return m_IsEntered;
+}
+
+std::string Client::getName()
+{
+	return m_Name;
+}
+
+void Client::sendNameList()
+{
+	char sendBuffer[BUF_SIZE];
+
+	sprintf(sendBuffer + 2, "%s", ClientManager::getInstance()->getNames().c_str());
+	sendBuffer[LENGTH_BIT] = strlen(sendBuffer + 2);
+	sendBuffer[TYPE_BIT] = PKT_UPDATE_LIST;
+	ClientManager::getInstance()->broadcast(sendBuffer, strlen(sendBuffer));
 }

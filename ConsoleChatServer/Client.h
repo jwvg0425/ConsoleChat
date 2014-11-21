@@ -23,11 +23,13 @@ public:
 	void		send(char* buffer, size_t bytes);
 	void		update(char* buffer, size_t bytes);
 	bool		isConnected();
+	void		sendNameList();
+	std::string getName();
 
 private:
 	SOCKET		m_Socket;
 	Buffer		m_Buffer;
-	bool		m_IsConnected;
+	bool		m_IsEntered;
 	std::string m_Name;
 };
 
